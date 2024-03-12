@@ -22,6 +22,7 @@ class Record:
 class EasyLite:
     def __init__(self, db_name: str):
         self.db_name = db_name
+        self.tables = []
 
     def connect(self):
         return sqlite3.connect(self.db_name)
@@ -34,15 +35,8 @@ class EasyLite:
 
     def create_table(self, table_name, *, auto_increment=True, **kwargs):
         fields = {}
-        for name, field_type in kwargs.items():
-            if field_type in (str, datetime, date):
-                fields[name] = 'TEXT'
-            elif field_type is int:
-                fields[name] = 'INTEGER'
-            elif field_type is float:
-                fields[name] = 'REAL'
-            elif field_type is bytes:
-                fields[name] = 'BLOB'
+        for k, v in kwargs.items():
+            fields[k] = py_type_to_sqlite_type(v)
         fields_iter = (f'{name} {field_type}' for name, field_type in fields.items())
         fields_sql = ', '.join(fields_iter)
         if not auto_increment:
@@ -67,3 +61,15 @@ class EasyLite:
         sql = f'INSERT INTO {table_name}({fields_str}) VALUES ({values_str})'
         self.query(sql)
 
+
+def py_type_to_sqlite_type(py_type):
+    sqlite_type = None
+    if py_type in (str, datetime, date):
+        sqlite_type = 'TEXT'
+    elif py_type is int:
+        sqlite_type = 'INTEGER'
+    elif py_type is float:
+        sqlite_type = 'REAL'
+    elif py_type is bytes:
+        sqlite_type = 'BLOB'
+    return sqlite_type
